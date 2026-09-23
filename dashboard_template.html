@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="300">
+<title>Urgência Geral · Hospital de Santa Maria</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
+    --c-laranja: #eb6834; --c-amarelo: #eda100; --c-verde: #008300; --c-azul: #2a78d6;
+    --geral: #4a3aa7; --maximo: #898781;
+    --pior: #d03b3b; --melhor: #006300;
+    --wash: rgba(11,11,11,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+      --c-laranja: #d95926; --c-amarelo: #c98500; --c-verde: #008300; --c-azul: #3987e5;
+      --geral: #9085e9; --maximo: #898781;
+      --pior: #e66767; --melhor: #0ca30c;
+      --wash: rgba(255,255,255,.06);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+    --c-laranja: #d95926; --c-amarelo: #c98500; --c-verde: #008300; --c-azul: #3987e5;
+    --geral: #9085e9; --maximo: #898781;
+    --pior: #e66767; --melhor: #0ca30c;
+    --wash: rgba(255,255,255,.06);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
+  header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+  header p { margin: 4px 0 0; color: var(--ink2); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .card h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card .sub { margin: 2px 0 12px; color: var(--ink2); font-size: 13px; }
+  .eyebrow { margin: 22px 0 8px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink2); }
+
+  /* hero + estado atual */
+  .now { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+  @media (max-width: 720px) { .now { grid-template-columns: 1fr; } }
+  .hero .label { color: var(--ink2); font-size: 13px; }
+  .hero .value { font-size: 56px; line-height: 1.1; font-weight: 600; letter-spacing: -.02em; margin: 4px 0; }
+  .hero .delta { font-size: 13px; color: var(--ink2); }
+  .delta b { font-weight: 600; }
+  .delta .up { color: var(--pior); } .delta .down { color: var(--melhor); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat .label { color: var(--ink2); font-size: 13px; }
+  .stat .value { font-size: 30px; font-weight: 600; margin-top: 4px; letter-spacing: -.01em; }
+  .stat .note { color: var(--ink2); font-size: 12px; margin-top: 2px; }
+
+  .cores { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 12px; }
+  .cor .head { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .cor .head small { font-weight: 400; color: var(--ink2); }
+  .cor .value { font-size: 30px; font-weight: 600; margin-top: 6px; letter-spacing: -.01em; }
+  .cor .value small { font-size: 13px; font-weight: 400; color: var(--ink2); margin-left: 4px; }
+  .cor .note { color: var(--ink2); font-size: 13px; margin-top: 2px; }
+
+  /* filtros */
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 26px 0 12px; }
+  .filters .lbl { color: var(--ink2); font-size: 13px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .seg button {
+    font: inherit; color: var(--ink); background: transparent; border: 0; padding: 7px 14px; cursor: pointer;
+    border-right: 1px solid var(--border);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: var(--wash); }
+  .seg button[aria-pressed="true"] { font-weight: 600; background: var(--wash); box-shadow: inset 0 -2px 0 var(--ink); }
+  .seg button:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .filters .info { color: var(--ink2); font-size: 13px; }
+
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 6px; color: var(--ink2); font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; border-radius: 1px; }
+  .legend i.fill { height: 10px; width: 10px; border: 0; border-radius: 2px; }
+  .plot { position: relative; }
+  .plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .plot svg:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+  .empty { color: var(--ink2); padding: 36px 0; text-align: center; }
+  .ax { fill: var(--muted); font-size: 11px; font-family: inherit; }
+  .lab { fill: var(--ink2); font-size: 12px; font-weight: 600; font-family: inherit; }
+
+  .tip {
+    position: absolute; pointer-events: none; z-index: 5; min-width: 150px; max-width: 260px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.14); font-size: 12px;
+  }
+  .tip .t { color: var(--ink2); margin-bottom: 4px; }
+  .tip .r { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .tip .r i { width: 12px; height: 0; border-top: 2px solid; flex: none; }
+  .tip .r b { font-size: 13px; font-weight: 600; }
+  .tip .r span { color: var(--ink2); }
+
+  .porcor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 12px; }
+  .pc .head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+  .pc .head small { font-weight: 400; color: var(--ink2); font-size: 13px; }
+  .pc .facts { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 6px 0 4px; color: var(--ink2); font-size: 13px; }
+  .pc .facts b { color: var(--ink); font-weight: 600; }
+  .pc .cap { margin: 10px 0 0; color: var(--ink2); font-size: 12px; }
+  details.tabela { margin-top: 12px; }
+  details.tabela summary { cursor: pointer; padding: 12px 20px; }
+  .scroll { overflow: auto; max-height: 380px; padding: 0 20px 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13px; }
+  th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { position: sticky; top: 0; background: var(--surface); color: var(--ink2); font-weight: 600; }
+  footer { margin-top: 24px; color: var(--ink2); font-size: 12px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Urgência Geral · Hospital de Santa Maria (Lisboa)</h1>
+    <p id="meta"></p>
+  </header>
+
+  <div id="agora"></div>
+
+  <div class="filters" role="group" aria-label="Período dos gráficos">
+    <span class="lbl">Período</span>
+    <div class="seg" id="seg"></div>
+    <span class="info" id="rangeinfo"></span>
+  </div>
+
+  <div class="charts">
+    <section class="card">
+      <h2>Espera para 1ª observação</h2>
+      <p class="sub">Tempo médio e máximo, em todos os utentes à espera.</p>
+      <div class="legend" id="lg1"></div>
+      <div class="plot" id="c1"></div>
+    </section>
+    <section class="card">
+      <h2>Espera média por cor de triagem</h2>
+      <p class="sub">Só quando há utentes dessa cor à espera.</p>
+      <div class="legend" id="lg2"></div>
+      <div class="plot" id="c2"></div>
+    </section>
+    <section class="card">
+      <h2>Utentes à espera por cor</h2>
+      <p class="sub">Empilhado; a altura total é o nº de utentes com prioridade atribuída.</p>
+      <div class="legend" id="lg3"></div>
+      <div class="plot" id="c3"></div>
+    </section>
+    <section class="card">
+      <h2>Espera média por hora do dia</h2>
+      <p class="sub" id="sub4">Média das leituras de cada hora.</p>
+      <div class="plot" id="c4"></div>
+    </section>
+  </div>
+
+  <div class="eyebrow">Por cor de triagem · número de utentes e espera média</div>
+  <div class="porcor" id="porcor"></div>
+
+  <details class="card tabela">
+    <summary>Ver tabela de dados</summary>
+    <div class="scroll"><table id="tbl"></table></div>
+  </details>
+
+  <footer>
+    Fonte: SNS · tempos.min-saude.pt (tempos calculados sobre os utentes presentes no serviço, com admissão nas últimas 72 h).
+    Cores da triagem de Manchester: laranja = Muito urgente, amarelo = Urgente, verde = Pouco urgente, azul = Não urgente.
+    Painel gerado a <span id="gerado"></span>; atualiza-se a cada nova recolha.
+  </footer>
+</div>
+
+<script>
+const DATA = __DATA__;
+const GERADO = "__GERADO__";
+
+(() => {
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const GAP = 40 * 60000; // acima disto sem leituras, a linha parte-se
+
+  const COR = [
+    { id: "laranja", nome: "Laranja", sub: "Muito urgente", css: "--c-laranja", n: "ln", m: "lm" },
+    { id: "amarelo", nome: "Amarelo", sub: "Urgente", css: "--c-amarelo", n: "an", m: "am" },
+    { id: "verde", nome: "Verde", sub: "Pouco urgente", css: "--c-verde", n: "vn", m: "vm" },
+    { id: "azul", nome: "Azul", sub: "Não urgente", css: "--c-azul", n: "bn", m: "bm" },
+  ];
+
+  const ALL = DATA.map(r => ({ ...r, t: +new Date(r.fonte) })).filter(r => !isNaN(r.t)).sort((a, b) => a.t - b.t);
+
+  // ---------- helpers ----------
+  const pad = n => String(n).padStart(2, "0");
+  const fmtMin = m => (m == null ? "—" : m >= 60 ? `${Math.floor(m / 60)}h ${pad(Math.round(m % 60))}m` : `${Math.round(m)}m`);
+  const fmtAx = v => (v === 0 ? "0" : v < 60 ? `${v}m` : v % 60 === 0 ? `${v / 60}h` : `${Math.floor(v / 60)}h${pad(v % 60)}`);
+  const fmtDT = t => { const d = new Date(t); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const svg = (name, attrs, parent, text) => {
+    const e = document.createElementNS(SVGNS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const niceStep = (max, steps) => steps.find(s => max / s <= 5) || steps[steps.length - 1];
+  const MIN_STEPS = [10, 15, 30, 60, 120, 180, 240, 360, 480, 720, 1440];
+  const CNT_STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500];
+
+  function timeTicks(t0, t1, px) {
+    const off = new Date(t0).getTimezoneOffset() * 60000;
+    const steps = [10, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080].map(x => x * 60000);
+    const want = Math.max(2, Math.floor(px / 95));
+    const step = steps.find(s => (t1 - t0) / s <= want) || steps[steps.length - 1];
+    const ticks = [];
+    for (let k = Math.ceil((t0 - off) / step) * step + off; k <= t1; k += step) ticks.push(k);
+    return { ticks: ticks.length ? ticks : [t0, t1], step };
+  }
+  const tickLabel = (t, step) => {
+    const d = new Date(t);
+    if (step >= 1440 * 60000 || (d.getHours() === 0 && d.getMinutes() === 0)) return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  // divide em troços contínuos (parte em valores nulos e em falhas de recolha)
+  function segments(rows, val) {
+    const segs = []; let cur = [];
+    rows.forEach((r, i) => {
+      const v = val(r);
+      if (v == null || (cur.length && r.t - rows[cur[cur.length - 1]].t > GAP)) { if (cur.length) segs.push(cur); cur = []; }
+      if (v != null) cur.push(i);
+    });
+    if (cur.length) segs.push(cur);
+    return segs;
+  }
+
+  function tooltip(plot) {
+    const tip = h("div", "tip"); tip.hidden = true; plot.appendChild(tip);
+    return {
+      show(x, y, title, lines) {
+        tip.replaceChildren();
+        tip.appendChild(h("div", "t", title));
+        for (const l of lines) {
+          const r = h("div", "r");
+          if (l.color) { const k = h("i"); k.style.borderTopColor = l.color; r.appendChild(k); }
+          r.appendChild(h("b", null, l.value)); r.appendChild(h("span", null, l.label));
+          tip.appendChild(r);
+        }
+        tip.hidden = false;
+        const w = tip.offsetWidth, hh = tip.offsetHeight, pw = plot.clientWidth;
+        let left = x + 14; if (left + w > pw) left = x - w - 14;
+        tip.style.left = Math.max(0, left) + "px";
+        tip.style.top = Math.max(0, Math.min(y - hh / 2, plot.clientHeight - hh)) + "px";
+      },
+      hide() { tip.hidden = true; },
+    };
+  }
+
+  // ---------- gráfico de linhas / área empilhada ----------
+  function timeChart(host, cfg) {
+    host.replaceChildren();
+    const rows = cfg.rows;
+    if (!rows.length) { host.appendChild(h("div", "empty", "Sem leituras neste período.")); return; }
+
+    const W = Math.max(300, host.clientWidth), H = cfg.height || 268;
+    const m = { l: 44, r: 20, t: 12, b: 28 };
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    let t0 = rows[0].t, t1 = rows[rows.length - 1].t;
+    if (t1 === t0) { t0 -= 30 * 60000; t1 += 30 * 60000; }
+    const X = t => m.l + (t - t0) / (t1 - t0) * iw;
+
+    // valores (área: acumulados)
+    const S = cfg.series;
+    const vals = S.map(s => rows.map(r => s.val(r)));
+    let cum = null;
+    if (cfg.stacked) {
+      cum = []; let acc = rows.map(() => 0);
+      S.forEach((s, i) => { acc = acc.map((a, j) => a + (vals[i][j] || 0)); cum.push(acc); });
+    }
+    const max = Math.max(1, ...(cfg.stacked ? cum[cum.length - 1] : vals.flat().filter(v => v != null)));
+    const step = niceStep(max, cfg.steps);
+    const top = Math.ceil(max / step) * step;
+    const Y = v => m.t + ih - v / top * ih;
+
+    const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "group", tabindex: 0, "aria-label": cfg.title + ". Use as setas esquerda e direita para ler os valores." }, host);
+
+    // grelha + eixo Y
+    for (let v = 0; v <= top; v += step) {
+      svg("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), style: `stroke:var(${v === 0 ? "--axis" : "--grid"});stroke-width:1` }, root);
+      svg("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end", class: "ax" }, root, cfg.yFmt(v));
+    }
+    // eixo X
+    const { ticks, step: xs } = timeTicks(t0, t1, iw);
+    for (const k of ticks) svg("text", { x: X(k), y: H - 8, "text-anchor": "middle", class: "ax" }, root, tickLabel(k, xs));
+
+    // marcas
+    if (cfg.stacked) {
+      for (let i = S.length - 1; i >= 0; i--) {
+        for (const seg of segments(rows, () => 1)) {
+          const up = seg.map(j => `${X(rows[j].t)},${Y(cum[i][j])}`);
+          const lo = seg.slice().reverse().map(j => `${X(rows[j].t)},${Y(i ? cum[i - 1][j] : 0)}`);
+          svg("polygon", { points: up.concat(lo).join(" "), style: `fill:var(${S[i].css});stroke:var(--surface);stroke-width:2;stroke-linejoin:round` }, root);
+        }
+      }
+    } else {
+      S.forEach((s, i) => {
+        for (const seg of segments(rows, r => s.val(r))) {
+          if (seg.length > 1)
+            svg("path", { d: seg.map((j, k) => `${k ? "L" : "M"}${X(rows[j].t)},${Y(vals[i][j])}`).join(""), fill: "none", style: `stroke:var(${s.css});stroke-width:2;stroke-linejoin:round;stroke-linecap:round`, ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, root);
+        }
+        // ponto final de cada série (âncora + leituras isoladas)
+        const last = vals[i].map((v, j) => (v != null ? j : -1)).filter(j => j >= 0).pop();
+        if (last != null) svg("circle", { cx: X(rows[last].t), cy: Y(vals[i][last]), r: 4, style: `fill:var(${s.css});stroke:var(--surface);stroke-width:2` }, root);
+      });
+    }
+
+    // interação
+    const cross = svg("line", { y1: m.t, y2: m.t + ih, style: "stroke:var(--ink2);stroke-width:1", visibility: "hidden" }, root);
+    const dots = S.map(s => svg("circle", { r: 4, style: `fill:var(${s.css});stroke:var(--surface);stroke-width:2`, visibility: "hidden" }, root));
+    const tip = tooltip(host);
+    const pick = px => {
+      const t = t0 + (px - m.l) / iw * (t1 - t0);
+      let lo = 0, hi = rows.length - 1;
+      while (hi - lo > 1) { const mid = (lo + hi) >> 1; rows[mid].t < t ? (lo = mid) : (hi = mid); }
+      return Math.abs(rows[lo].t - t) <= Math.abs(rows[hi].t - t) ? lo : hi;
+    };
+    const showAt = idx => {
+      const r = rows[idx], x = X(r.t);
+      cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.setAttribute("visibility", "visible");
+      const lines = [];
+      S.forEach((s, i) => {
+        const v = vals[i][idx];
+        dots[i].setAttribute("visibility", v == null ? "hidden" : "visible");
+        if (v != null) { dots[i].setAttribute("cx", x); dots[i].setAttribute("cy", Y(cfg.stacked ? cum[i][idx] : v)); }
+        lines.push({ color: `var(${s.css})`, value: v == null ? "—" : cfg.tipFmt(v), label: s.name });
+      });
+      lines.reverse();
+      if (cfg.stacked) lines.unshift({ value: String(cum[cum.length - 1][idx]), label: "Total com prioridade" });
+      const scale = host.clientWidth / W;
+      tip.show(x * scale, m.t + ih / 2, fmtDT(r.t), lines);
+    };
+    const hide = () => { cross.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); tip.hide(); };
+    const over = svg("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" }, root);
+    over.addEventListener("pointermove", e => { const b = root.getBoundingClientRect(); showAt(pick((e.clientX - b.left) * W / b.width)); });
+    over.addEventListener("pointerleave", hide);
+    let kb = rows.length - 1;
+    root.addEventListener("focus", () => showAt(kb));
+    root.addEventListener("blur", hide);
+    root.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") kb = Math.max(0, kb - 1); else if (e.key === "ArrowRight") kb = Math.min(rows.length - 1, kb + 1); else return;
+      e.preventDefault(); showAt(kb);
+    });
+  }
+
+  // ---------- colunas: espera média por hora do dia ----------
+  function hourChart(host, rows) {
+    host.replaceChildren();
+    const acc = Array.from({ length: 24 }, () => ({ s: 0, n: 0 }));
+    rows.forEach(r => { const a = acc[new Date(r.t).getHours()]; a.s += r.med; a.n++; });
+    const avg = acc.map(a => (a.n ? a.s / a.n : null));
+    const have = avg.filter(v => v != null);
+    if (!have.length) { host.appendChild(h("div", "empty", "Sem leituras neste período.")); return; }
+
+    const W = Math.max(300, host.clientWidth), H = 268;
+    const m = { l: 44, r: 12, t: 22, b: 28 };
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const step = niceStep(Math.max(...have), MIN_STEPS), top = Math.ceil(Math.max(...have) / step) * step;
+    const Y = v => m.t + ih - v / top * ih;
+    const slot = iw / 24, bw = Math.min(24, slot - 8);
+    const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "group", "aria-label": "Espera média por hora do dia" }, host);
+    for (let v = 0; v <= top; v += step) {
+      svg("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), style: `stroke:var(${v === 0 ? "--axis" : "--grid"});stroke-width:1` }, root);
+      svg("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end", class: "ax" }, root, fmtAx(v));
+    }
+    const tip = tooltip(host);
+    const peak = avg.indexOf(Math.max(...have));
+    for (let hr = 0; hr < 24; hr++) {
+      const cx = m.l + slot * (hr + .5);
+      if (hr % 3 === 0) svg("text", { x: cx, y: H - 8, "text-anchor": "middle", class: "ax" }, root, `${pad(hr)}h`);
+      const v = avg[hr];
+      const hit = svg("rect", { x: cx - slot / 2, y: m.t, width: slot, height: ih, fill: "transparent", tabindex: v == null ? -1 : 0, "aria-label": v == null ? `${pad(hr)}h: sem dados` : `${pad(hr)}h: ${fmtMin(v)}` }, root);
+      if (v == null) continue;
+      const y = Y(v), x = cx - bw / 2, r = Math.min(4, bw / 2, ih - (y - m.t));
+      const bar = svg("path", { d: `M${x},${m.t + ih}V${y + r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y + r}V${m.t + ih}Z`, style: "fill:var(--geral)" }, root);
+      const on = () => { bar.style.opacity = ".8"; tip.show(cx, y, `${pad(hr)}h – ${pad((hr + 1) % 24)}h`, [{ color: "var(--geral)", value: fmtMin(v), label: `média · ${acc[hr].n} leituras` }]); };
+      const off = () => { bar.style.opacity = ""; tip.hide(); };
+      hit.addEventListener("pointermove", on); hit.addEventListener("pointerleave", off);
+      hit.addEventListener("focus", on); hit.addEventListener("blur", off);
+      if (hr === peak) svg("text", { x: cx, y: y - 6, "text-anchor": "middle", class: "lab" }, root, fmtMin(v));
+    }
+    const span = (rows[rows.length - 1].t - rows[0].t) / 3600000;
+    $("#sub4").textContent = span < 48
+      ? "Com menos de 2 dias de dados isto ainda é só um retrato; fica fiável com vários dias."
+      : `Média das leituras de cada hora · pico às ${pad(peak)}h (${fmtMin(avg[peak])}).`;
+  }
+
+  const $ = s => document.querySelector(s);
+
+  // ---------- cabeçalho, estado atual ----------
+  function renderAgora() {
+    const box = $("#agora"); box.replaceChildren();
+    const last = ALL[ALL.length - 1], prev = ALL[ALL.length - 2];
+    if (!last) { box.appendChild(h("div", "card empty", "Ainda não há leituras. Corre o agente (santa_maria_agent.py) para gravar a primeira.")); return; }
+    $("#meta").textContent = `Última atualização da fonte: ${fmtDT(last.t)} · ${ALL.length} leituras desde ${fmtDT(ALL[0].t)}`;
+    box.appendChild(h("div", "eyebrow", "Última leitura"));
+
+    const now = h("div", "now");
+    const hero = h("div", "card hero");
+    hero.appendChild(h("div", "label", "Espera média para 1ª observação"));
+    hero.appendChild(h("div", "value", fmtMin(last.med)));
+    const dl = h("div", "delta");
+    if (prev) {
+      const d = last.med - prev.med;
+      if (d === 0) dl.textContent = `Sem alteração face à leitura anterior (${fmtDT(prev.t)})`;
+      else {
+        const s = h("b", d > 0 ? "up" : "down", `${d > 0 ? "▲ +" : "▼ −"}${fmtMin(Math.abs(d))}`);
+        dl.append(s, ` face à leitura anterior (${fmtDT(prev.t)})`);
+      }
+    } else dl.textContent = "Primeira leitura registada";
+    hero.appendChild(dl);
+    now.appendChild(hero);
+
+    const pair = h("div", "pair");
+    for (const [lab, val, note] of [["Utentes à espera", String(last.n), "de 1ª observação"], ["Espera máxima", fmtMin(last.max), "o utente que espera há mais tempo"]]) {
+      const c = h("div", "card stat"); c.append(h("div", "label", lab), h("div", "value", val), h("div", "note", note)); pair.appendChild(c);
+    }
+    now.appendChild(pair);
+    box.appendChild(now);
+
+    const cores = h("div", "cores");
+    for (const c of COR) {
+      const n = last[c.n], m = last[c.m];
+      const card = h("div", "card cor");
+      const head = h("div", "head"); const dot = h("span", "dot"); dot.style.background = `var(${c.css})`;
+      const sm = h("small", null, c.sub); head.append(dot, document.createTextNode(c.nome), sm);
+      const val = h("div", "value", String(n)); val.appendChild(h("small", null, n === 1 ? "utente" : "utentes"));
+      card.append(head, val, h("div", "note", n > 0 ? `espera média ${fmtMin(m)}` : "sem utentes à espera"));
+      cores.appendChild(card);
+    }
+    box.appendChild(cores);
+  }
+
+  // ---------- filtro + gráficos ----------
+  const RANGES = [["24 h", 24 * 3600e3], ["7 dias", 7 * 86400e3], ["30 dias", 30 * 86400e3], ["Tudo", Infinity]];
+  let range = 3;
+  try { const s = localStorage.getItem("sm-range"); if (s != null && RANGES[+s]) range = +s; } catch (e) {}
+
+  const legend = (id, items) => {
+    const el = $(id); el.replaceChildren();
+    for (const it of items) {
+      const s = h("span"); const k = h("i", it.fill ? "fill" : ""); k.style[it.fill ? "background" : "borderTopColor"] = `var(${it.css})`;
+      s.append(k, document.createTextNode(it.name)); el.appendChild(s);
+    }
+  };
+
+  function rowsInRange() {
+    if (!ALL.length) return [];
+    const end = ALL[ALL.length - 1].t, span = RANGES[range][1];
+    return ALL.filter(r => r.t >= end - span);
+  }
+
+  function renderCharts() {
+    const rows = rowsInRange();
+    $("#rangeinfo").textContent = rows.length ? `${rows.length} leituras · ${fmtDT(rows[0].t)} → ${fmtDT(rows[rows.length - 1].t)}` : "";
+
+    const s1 = [{ name: "Média", css: "--geral", val: r => r.med }, { name: "Máximo", css: "--maximo", val: r => r.max }];
+    legend("#lg1", s1);
+    timeChart($("#c1"), { rows, series: s1, title: "Espera para 1ª observação", steps: MIN_STEPS, yFmt: fmtAx, tipFmt: fmtMin });
+
+    const s2 = COR.map(c => ({ name: `${c.nome} · ${c.sub}`, css: c.css, val: r => (r[c.n] > 0 ? r[c.m] : null) }));
+    legend("#lg2", s2);
+    timeChart($("#c2"), { rows, series: s2, title: "Espera média por cor de triagem", steps: MIN_STEPS, yFmt: fmtAx, tipFmt: fmtMin });
+
+    // empilhado de baixo para cima: azul, verde, amarelo, laranja (o mais urgente no topo)
+    const s3 = COR.slice().reverse().map(c => ({ name: `${c.nome} · ${c.sub}`, css: c.css, val: r => r[c.n] }));
+    legend("#lg3", COR.map(c => ({ name: `${c.nome} · ${c.sub}`, css: c.css, fill: true })));
+    timeChart($("#c3"), { rows, series: s3, stacked: true, title: "Utentes à espera por cor", steps: CNT_STEPS, yFmt: String, tipFmt: v => `${v}` });
+
+    hourChart($("#c4"), rows);
+    renderPorCor(rows);
+    renderTable(rows);
+  }
+
+  // ---------- secção por cor: nº de utentes + espera média, lado a lado ----------
+  const pcBuilt = {};
+  function buildPorCor() {
+    const box = $("#porcor");
+    for (const c of COR) {
+      const card = h("section", "card pc");
+      const head = h("div", "head"); const dot = h("span", "dot"); dot.style.background = `var(${c.css})`;
+      head.append(dot, document.createTextNode(c.nome), h("small", null, c.sub));
+      const facts = h("div", "facts");
+      const capN = h("p", "cap", "Nº de utentes à espera de 1ª observação"), plotN = h("div", "plot");
+      const capM = h("p", "cap", "Espera média para 1ª observação"), plotM = h("div", "plot");
+      card.append(head, facts, capN, plotN, capM, plotM);
+      box.appendChild(card);
+      pcBuilt[c.id] = { facts, plotN, plotM };
+    }
+  }
+  function renderPorCor(rows) {
+    for (const c of COR) {
+      const { facts, plotN, plotM } = pcBuilt[c.id];
+      const com = rows.filter(r => r[c.n] > 0);
+      const avg = a => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+      const nMed = avg(rows.map(r => r[c.n])), tMed = avg(com.map(r => r[c.m]));
+      const nMax = rows.length ? Math.max(...rows.map(r => r[c.n])) : null, tMax = com.length ? Math.max(...com.map(r => r[c.m])) : null;
+      facts.replaceChildren();
+      const fact = (label, val) => { const s = h("span"); s.append(document.createTextNode(label + " "), h("b", null, val)); facts.appendChild(s); };
+      fact("Média do período:", nMed == null ? "—" : `${nMed.toFixed(1).replace(".", ",")} utentes · ${fmtMin(tMed)}`);
+      fact("Pico:", nMax == null ? "—" : `${nMax} utentes · espera ${fmtMin(tMax)}`);
+      timeChart(plotN, { rows, height: 170, series: [{ name: "Utentes", css: c.css, val: r => r[c.n] }], title: `${c.nome}: nº de utentes`, steps: CNT_STEPS, yFmt: String, tipFmt: v => `${v} ${v === 1 ? "utente" : "utentes"}` });
+      timeChart(plotM, { rows, height: 170, series: [{ name: "Espera média", css: c.css, val: r => (r[c.n] > 0 ? r[c.m] : null) }], title: `${c.nome}: espera média`, steps: MIN_STEPS, yFmt: fmtAx, tipFmt: fmtMin });
+    }
+  }
+
+  function renderTable(rows) {
+    const t = $("#tbl"); t.replaceChildren();
+    const head = ["Fonte", "Utentes", "Média", "Máx", ...COR.map(c => c.nome)];
+    const thead = h("thead"), hr = h("tr"); head.forEach(x => hr.appendChild(h("th", null, x))); thead.appendChild(hr); t.appendChild(thead);
+    const tb = h("tbody");
+    for (const r of rows.slice().reverse().slice(0, 300)) {
+      const tr = h("tr");
+      [fmtDT(r.t), r.n, fmtMin(r.med), fmtMin(r.max), ...COR.map(c => (r[c.n] > 0 ? `${r[c.n]} · ${fmtMin(r[c.m])}` : "0"))].forEach(x => tr.appendChild(h("td", null, String(x))));
+      tb.appendChild(tr);
+    }
+    t.appendChild(tb);
+  }
+
+  // filtro
+  const seg = $("#seg");
+  RANGES.forEach(([label], i) => {
+    const b = h("button", null, label); b.type = "button"; b.setAttribute("aria-pressed", String(i === range));
+    b.addEventListener("click", () => {
+      range = i; try { localStorage.setItem("sm-range", i); } catch (e) {}
+      seg.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === i)));
+      renderCharts();
+    });
+    seg.appendChild(b);
+  });
+
+  $("#gerado").textContent = GERADO;
+  buildPorCor();
+  renderAgora();
+  renderCharts();
+  let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(renderCharts, 120); }).observe(document.querySelector(".charts"));
+})();
+</script>
+</body>
+</html>
