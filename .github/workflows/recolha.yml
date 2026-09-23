@@ -1,0 +1,68 @@
+name: Recolha Santa Maria
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # o GitHub pode atrasar ou saltar execuções em horas de carga
+  workflow_dispatch:          # botão "Run workflow" para correr à mão
+
+permissions:
+  contents: write   # gravar o CSV no repositório
+  pages: write      # publicar o dashboard
+  id-token: write
+
+concurrency:
+  group: recolha
+  cancel-in-progress: false
+
+jobs:
+  recolha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      TZ: Europe/Lisbon
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Recolher tempos de espera
+        continue-on-error: true   # uma falha pontual do site não deve parar o resto
+        run: python santa_maria_agent.py
+
+      - name: Gravar dados no repositório
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dados/santa_maria_geral.csv
+          if git diff --cached --quiet; then
+            echo "Sem leituras novas."
+          else
+            git commit -m "Leitura $(date '+%Y-%m-%d %H:%M')"
+            git pull --rebase
+            git push
+          fi
+
+      - name: Gerar dashboard
+        run: |
+          python gerar_dashboard.py
+          mkdir -p _site
+          cp dashboard.html _site/index.html
+          cp dashboard.html _site/dashboard.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
